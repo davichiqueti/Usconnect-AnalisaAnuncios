@@ -1,2 +1,3 @@
-# USCONNECT-ConsultaAnuncios
- Software project with Mercado Livre's API
+# USCONNECT-AnalisaAnuncios
+
+ Software project to analyze ads from a ML's(Mercado Livre) Seller by his UserID
