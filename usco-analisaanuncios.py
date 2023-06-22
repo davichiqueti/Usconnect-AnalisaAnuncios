@@ -1,95 +1,99 @@
+import gui
 import requests
-import json
 import pandas as pd
-import openpyxl
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 
-
-def requestAds(seller_id, limit, offset):
+def requestAds(seller_name, limit, offset):
 
     url = f"https://api.mercadolibre.com/sites/MLB/search?"
 
     params = {
-
-        'seller_id': seller_id,
+        'nickname': seller_name,
+        'sort': 'price_asc',
         'offset': offset,
         'limit': limit
-
     }
-    
+
     response = requests.get(url, params=params)
 
     if response.status_code == 200:
-
         data = response.json()
-        # Organiza os dados em formato JSON para visualização
-        json_data = json.dumps(data['results'], indent=4)
-        with open('dados.txt', 'w') as file: file.write(json_data)
-
+        return data['results']
     else:
-
         print("Erro na chamada da API:", response.status_code)
         print("Mensagem de erro:", response.text)
-
-    return data['results']
-
+        return []
 
 
-def save_lists_as_excel(lists, filename):
+def pagingLoop(seller_name):
 
-    # Verifica se todas as listas têm o mesmo tamanho
-    list_size = len(lists[0])
-    if not all(len(lst) == list_size for lst in lists):
-        raise ValueError("As listas não têm o mesmo tamanho.")
-
-    # Cria um dicionário com os dados das listas
-    data = {f"Column{i+1}": lst for i, lst in enumerate(lists)}
-
-    # Cria um DataFrame a partir do dicionário
-    df = pd.DataFrame(data)
-
-    # Salva o DataFrame em um arquivo Excel
-    df.to_excel(filename, index=False)
-
-
-
-def pagingLoop():
-
-    seller_id = 703985802
     offset = 0
     limit = 50
-    
-    idList = []
-    titleList = []
-    priceList = []
+    analysisDate = datetime.now().date().strftime("%d/%m/%Y")
+    adList = []
 
+    while True:
 
-    for i in range(3):
-    #while True:
-
-        data = requestAds(seller_id, limit, offset)
+        data = requestAds(seller_name, limit, offset)
         if data == []: break
-
-        # Loops para extração dos dados
         for item in data:
 
-            idList.append(item['id'])
-            titleList.append(item['title'])
-            priceList.append(item['price'])
-
-
+            ad = {}
+            ad['ID'] = item['id']
+            ad['Título'] = item['title']
+            ad['Preço'] = float(item['price'])
+            if  item['listing_type_id'] == 'gold_pro': ad['Tipo'] = 'Premium'
+            else: ad['Tipo'] = 'Clássico'
+            ad['Vendas'] = item['sold_quantity']
+            ad['Data de Criação'] = convertDate(item['stop_time'])
+            ad['QTD Dias Ativo'] = calculateDateDifference(ad['Data de Criação'])
+            ad['Vendas/Dias'] = ad['Vendas'] / ad['QTD Dias Ativo']
+            ad['Link'] = item['permalink']
+            ad['Data da Análise'] = analysisDate
+            
+            adList.append(ad)
 
         offset += limit
 
+    return adList
 
-    return idList, titleList, priceList
+
+def save_dicts_as_excel(dict_list, column_names, filename):
+
+    df = pd.DataFrame(dict_list)
+    df.to_excel(filename, index=False)
+
+
+def convertDate(date):
+
+    date_obj = datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    corrected_date = date_obj - relativedelta(years=20) + timedelta(days=5)
+    formated_date = corrected_date.strftime("%d/%m/%Y")
+
+    return formated_date
+
+
+
+def calculateDateDifference(date):
+
+    current_date = datetime.now().date()
+    date_obj = datetime.strptime(date, "%d/%m/%Y").date()
+    difference = (current_date - date_obj).days
+    return difference
 
 
 def main():
 
-    save_lists_as_excel(pagingLoop(), 'tabela_teste.xlsx')
-
+    seller_name = gui.getNickName()
+    seller_data = pagingLoop(seller_name)
+    filename = f'Anuncios-{seller_name}.xlsx'
+    column_names = ['ID', 'Título', 'Preço', 'Tipo', 'Vendas', 'Data de Criação', 'QTD Dias Ativo', 'Vendas/Dias', 'Link', 'Data da Análise']
+    if seller_name != None:
+        
+        save_dicts_as_excel(seller_data, column_names, filename)
+        gui.savedPopup(filename)
 
 if __name__ == '__main__':
-
     main()
