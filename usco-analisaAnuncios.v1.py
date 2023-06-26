@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+import time
 from tqdm import tqdm
 import os
 
@@ -10,10 +11,12 @@ def requestAds(seller_name, offset, limit):
     url = f"https://api.mercadolibre.com/sites/MLB/search?"
 
     params = {
+
         'nickname': seller_name,
         'sort': 'price_desc',
         'offset': offset,
         'limit': limit,
+
     }
 
     response = requests.get(url, params=params)
@@ -127,19 +130,19 @@ def clear():
 def main():
 
     clear()
-    seller_name = input('Digite o nome do vendedor: ')    
+    seller_name = input('Digite o nome do vendedor: ').upper()
     seller_data = pagingLoop(seller_name)
 
     if seller_data != []:
 
-        filename = f'Anuncios {seller_name}.xlsx'
+        filename = f'Anúncios - {seller_name}.xlsx'
         save_dicts_as_excel(seller_data, filename)
         print(f'\nDados salvos em {filename}\n')
 
     else: print('\nERRO: Dados não encontrados, verifique o nome do vendedor e a conexão')
 
-    repeatProcess = input('Repetir Processo? (S/N): ')
-    if repeatProcess in ['S', 's']: main()
+    time.sleep(3)
+    main()
 
 
 if __name__ == '__main__':
