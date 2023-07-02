@@ -39,7 +39,7 @@ def requestAdsByProduct(search_query, sort, offset, limit):
         'q' : search_query,
         'sort': sort,
         'offset': offset,
-        'limit': limit,
+        'limit': limit
     }
 
     response = requests.get(url, params=params)
@@ -47,6 +47,7 @@ def requestAdsByProduct(search_query, sort, offset, limit):
     if response.status_code == 200:
         data = response.json()
         return data['results']
+    
     else:
         print("\nErro na chamada da API:", response.status_code)
         print("Mensagem de erro:", response.text)
@@ -101,6 +102,7 @@ def pagingLoop(search_query, sort, is_seller_search=True):
 
         for item in data:
             if item not in adsDataList:
+
                 ad = {}
                 ad['ID'] = item['id']
                 ad['Título'] = item['title']
@@ -120,6 +122,10 @@ def pagingLoop(search_query, sort, is_seller_search=True):
                 else:
                     ad['Vendas/Dias'] = ad['Vendas']
 
+                if not is_seller_search:
+                    ad['Vendedor'] = item["seller"]["nickname"]
+                
+                ad['Origem'] = item['address']['state_id']
                 ad['Link'] = item['permalink']
                 ad['Data da Análise'] = analysisDate
 
