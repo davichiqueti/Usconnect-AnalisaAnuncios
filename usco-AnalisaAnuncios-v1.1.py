@@ -6,9 +6,10 @@ from tqdm import tqdm
 import os
 import sys
 import re
+import argparse
 
 
-def requestAdsBySeller(seller_name, sort, offset, limit):
+def requestAdsBySeller(seller_name, sort, offset, limit, filter):
 
     url = f"https://api.mercadolibre.com/sites/MLB/search?"
 
@@ -18,6 +19,12 @@ def requestAdsBySeller(seller_name, sort, offset, limit):
         'offset': offset,
         'limit': limit,
     }
+
+    if filter and'internacional' in filter:
+        params['shipping_origin'] = 10215069
+    
+    if filter and 'best_sellers' in filter:
+        params['power_seller'] = 'yes'
 
     response = requests.get(url, params=params)
 
@@ -31,7 +38,7 @@ def requestAdsBySeller(seller_name, sort, offset, limit):
         return []
 
 
-def requestAdsByProduct(search_query, sort, offset, limit):
+def requestAdsByProduct(search_query, sort, offset, limit, filter):
 
     url = f"https://api.mercadolibre.com/sites/MLB/search?"
 
@@ -39,8 +46,14 @@ def requestAdsByProduct(search_query, sort, offset, limit):
         'q' : search_query,
         'sort': sort,
         'offset': offset,
-        'limit': limit
+        'limit': limit,
     }
+
+    if filter and'internacional' in filter:
+        params['shipping_origin'] = 10215069
+    
+    if filter and 'best_sellers' in filter:
+        params['power_seller'] = 'yes'
 
     response = requests.get(url, params=params)
 
@@ -53,7 +66,7 @@ def requestAdsByProduct(search_query, sort, offset, limit):
         print("Mensagem de erro:", response.text)
 
 
-def requestTotalItems(search_query, is_seller_search=True):
+def requestTotalItems(search_query, is_seller_search=True, filter = None):
 
     if is_seller_search:
         url = f"https://api.mercadolibre.com/sites/MLB/search?"
@@ -65,6 +78,12 @@ def requestTotalItems(search_query, is_seller_search=True):
 
     params['limit'] = 1
 
+    if filter and'internacional' in filter:
+        params['shipping_origin'] = 10215069
+    
+    if filter and 'best_sellers' in filter:
+        params['power_seller'] = 'yes'
+
     response = requests.get(url, params=params)
 
     data = response.json()
@@ -72,7 +91,7 @@ def requestTotalItems(search_query, is_seller_search=True):
     return data['paging']['total']
 
 
-def pagingLoop(search_query, sort, is_seller_search=True):
+def pagingLoop(search_query, sort, is_seller_search=True, filter = None):
 
     offset = 0
     limit = 50
@@ -80,20 +99,20 @@ def pagingLoop(search_query, sort, is_seller_search=True):
     adsDataList = []
 
     if is_seller_search:
-        total_items = requestTotalItems(search_query, is_seller_search=True)
+        total_items = requestTotalItems(search_query, is_seller_search=True, filter = filter)
         
     else:
-        total_items = requestTotalItems(search_query, is_seller_search=False)
+        total_items = requestTotalItems(search_query, is_seller_search=False, filter = filter)
 
     pbar = tqdm(total=total_items, desc='Extraindo Dados')
 
     while True:
 
         if is_seller_search:
-            data = requestAdsBySeller(search_query, sort, offset, limit)
+            data = requestAdsBySeller(search_query, sort, offset, limit, filter)
 
         else:
-            data = requestAdsByProduct(search_query, sort, offset, limit)
+            data = requestAdsByProduct(search_query, sort, offset, limit, filter)
 
         if not data or len(adsDataList) == total_items:
             
@@ -110,6 +129,7 @@ def pagingLoop(search_query, sort, is_seller_search=True):
 
                 if item['listing_type_id'] == 'gold_pro':
                     ad['Tipo'] = 'Premium'
+
                 else:
                     ad['Tipo'] = 'Clássico'
 
@@ -119,13 +139,16 @@ def pagingLoop(search_query, sort, is_seller_search=True):
 
                 if ad['QTD Dias Ativo'] != 0:
                     ad['Vendas/Dias'] = ad['Vendas'] / ad['QTD Dias Ativo']
+    
                 else:
-                    ad['Vendas/Dias'] = ad['Vendas']
+                    ad['Vendas/Dias'] = 0
+
+                ad['Envio'] = item['shipping']['logistic_type'].replace('xd_drop_off', 'normal').replace('drop_off', 'normal')
 
                 if not is_seller_search:
                     ad['Vendedor'] = item["seller"]["nickname"]
-                
-                ad['Origem'] = item['address']['state_id']
+                    ad['Origem'] = item['address']['state_id']
+
                 ad['Link'] = item['permalink']
                 ad['Data da Análise'] = analysisDate
 
@@ -211,40 +234,34 @@ def main(args):
 
     clear()
 
-    if '-h' in args:
+    parser = argparse.ArgumentParser(description='Usconnect Analisa Anuncios')
+
+    parser.add_argument('-v', '--vendedor', help='Especifica o nome do vendedor')
+    parser.add_argument('-i', '--item', help='Especifica o nome do item')
+    parser.add_argument('-o', '--ordenação', choices=['price_asc', 'price_desc', 'relevance'], default='price_desc',
+                        help='Especifica a ordenação dos resultados')
+    parser.add_argument('-n', '--nome_arquivo', help='Especifica o nome do arquivo')
+    parser.add_argument('-f', '--filtro', nargs='*', metavar=('filter_1', 'filter_2'), choices=['power_seller', 'internacional'], help='Especifica um filtro para a pesquisa')
+
+
+    args = parser.parse_args(args)
+
+    # Aqui definimos as variáveis seller_name, item_name, sort e output_filename com base nos argumentos fornecidos
+    seller_name = args.vendedor
+    item_name = args.item
+    sort = args.ordenação
+    output_filename = args.nome_arquivo
+    filter = args.filtro
+    
+    if '-h' in args or '--help' in args:
         exibir_mensagem_de_ajuda()
         return
-    
-    seller_name = None
-    item_name = None
-    sort = 'price_desc'
-    output_filename = None
-
-    for i in range(len(args)):
-        
-        if args[i] == '-v':
-            seller_name = args[i + 1].capitalize()
-        elif args[i] == '-i':
-            item_name = args[i + 1].capitalize()
-        elif args[i] == '-o':
-            sort = args[i + 1]
-
-        elif args[i] == '-n':
-            output_filename = args[i + 1]
-
-    if not output_filename:
-        if seller_name:
-            output_filename = f"Anuncios - {seller_name} - {sort}"
-        elif item_name:
-            output_filename = f"Anuncios - {item_name} - {sort}"
-
 
     if seller_name:
-        adsDataList = pagingLoop(seller_name, sort, is_seller_search=True)
+        adsDataList = pagingLoop(seller_name, sort, is_seller_search=True, filter = filter)
 
     elif item_name:
-        adsDataList = pagingLoop(item_name, sort, is_seller_search=False)
-
+        adsDataList = pagingLoop(item_name, sort, is_seller_search=False, filter = filter)
 
     else: 
         print("""
@@ -253,7 +270,15 @@ Você deve especificar o nome do vendedor (-v USCONNECT) ou do item (-i "Iphone 
 Comando usco-AnalisaAnuncios -h para mais informações
         """)
         return
-    
+
+    if not output_filename:
+
+        if seller_name:
+            output_filename = f"Anuncios - {seller_name} - {sort}"
+        elif item_name:
+            output_filename = f"Anuncios - {item_name} - {sort}"
+
+
     if adsDataList: 
         saveDictsAsExcel(adsDataList, output_filename)
 
