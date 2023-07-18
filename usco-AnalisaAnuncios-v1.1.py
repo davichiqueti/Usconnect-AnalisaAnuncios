@@ -10,109 +10,124 @@ import argparse
 
 
 def requestAdsBySeller(seller_name, sort, offset, limit, filter):
-
+    # Function to scrape data from the website by a seller name
     url = f"https://api.mercadolibre.com/sites/MLB/search?"
-
     params = {
         'nickname': seller_name,
         'sort': sort,
         'offset': offset,
         'limit': limit,
     }
-
-    if filter and'internacional' in filter:
-        params['shipping_origin'] = 10215069
+    # Adding filters ID to the query
+    if filter and 'internacional' in filter: params['shipping_origin'] = 10215069
     
-    if filter and 'best_sellers' in filter:
-        params['power_seller'] = 'yes'
+
+    if filter and 'best_sellers' in filter: params['power_seller'] = 'yes'
 
     response = requests.get(url, params=params)
 
-    if response.status_code == 200:
-        data = response.json()
-        return data['results']
+    if response.status_code == 200: return response.json()['results']
+    
     else:
 
-        print("\nErro na chamada da API:", response.status_code)
-        print("Mensagem de erro:", response.text)
-        return []
+        print("\nAPI ERROR:", response.status_code)
+        print("Erro ao extrair os anúncios:", response.text)
+
 
 
 def requestAdsByProduct(search_query, sort, offset, limit, filter):
-
+    #Function to scrape data from the website by a item name
     url = f"https://api.mercadolibre.com/sites/MLB/search?"
-
     params = {
         'q' : search_query,
         'sort': sort,
         'offset': offset,
         'limit': limit,
     }
-
-    if filter and'internacional' in filter:
-        params['shipping_origin'] = 10215069
+    #Adding filters ID in the query
+    if filter and'internacional' in filter: params['shipping_origin'] = 10215069
     
-    if filter and 'best_sellers' in filter:
-        params['power_seller'] = 'yes'
+
+    if filter and 'best_sellers' in filter: params['power_seller'] = 'yes'
 
     response = requests.get(url, params=params)
 
-    if response.status_code == 200:
-        data = response.json()
-        return data['results']
+    if response.status_code == 200: return response.json()['results']
     
     else:
-        print("\nErro na chamada da API:", response.status_code)
-        print("Mensagem de erro:", response.text)
+
+        print("\nAPI ERROR:", response.status_code)
+        print("Erro ao extrair os anúncios:", response.text)
+
 
 
 def requestTotalItems(search_query, is_seller_search=True, filter = None):
+    # Function to scrape the total quantity of ads
+    params ={}
+    params['limit'] = 1
 
     if is_seller_search:
+        # Scrapes total quantity by seller name
         url = f"https://api.mercadolibre.com/sites/MLB/search?"
         params = {'nickname': search_query}
 
     else:
+        # Scrapes total quantity by item name
         url = f"https://api.mercadolibre.com/sites/MLB/search?"
         params = {'q' : search_query}
 
-    params['limit'] = 1
 
     if filter and'internacional' in filter:
+        # Add filter ID in the query
         params['shipping_origin'] = 10215069
     
     if filter and 'best_sellers' in filter:
+        # Add filter ID in the query
         params['power_seller'] = 'yes'
 
-    response = requests.get(url, params=params)
 
+    response = requests.get(url, params=params)
     data = response.json()
 
     return data['paging']['total']
 
 
-def pagingLoop(search_query, sort, is_seller_search=True, filter = None):
+def getVisits(ad_id):
+    
+    url = f'https://api.mercadolibre.com/visits/items?ids={ad_id}'
 
+    try:
+
+        response = requests.get(url)
+        data = response.json()
+        
+        if response.status_code == 200: return data[ad_id]
+
+        elif response.status_code == 429: return getVisits(ad_id)
+
+        else:
+
+            print("\nAPI ERROR:", response.status_code)
+            print("Erro ao extrair as visitas:", response.text)
+
+    except requests.exceptions.ConnectTimeout as e: print("\nErro de tempo limite de conexão:", e)
+
+    except requests.exceptions.RequestException as e: print("\nErro de requisição:", e)
+
+
+
+def pagingLoop(search_query, sort, is_seller_search=True, filter = None):
+    # Calls the right extraction function by the search type and loops it until extracts all data
     offset = 0
     limit = 50
     analysisDate = datetime.now().date().strftime("%d/%m/%Y")
     adsDataList = []
-
-    if is_seller_search:
-        total_items = requestTotalItems(search_query, is_seller_search=True, filter = filter)
-        
-    else:
-        total_items = requestTotalItems(search_query, is_seller_search=False, filter = filter)
-
-    pbar = tqdm(total=total_items, desc='Extraindo Dados')
+    total_items = requestTotalItems(search_query, is_seller_search=True, filter = filter) if is_seller_search else requestTotalItems(search_query, is_seller_search=False, filter = filter)
+    pbar = tqdm(total=total_items, desc='Extraindo Dados') # Create a progress bar using tqdm library
 
     while True:
-
-        if is_seller_search:
-            data = requestAdsBySeller(search_query, sort, offset, limit, filter)
-
-        else:
-            data = requestAdsByProduct(search_query, sort, offset, limit, filter)
+        # Ternary operator to call the right function to get data
+        data = requestAdsBySeller(search_query, sort, offset, limit, filter) if is_seller_search else requestAdsByProduct(search_query, sort, offset, limit, filter)
 
         if not data or len(adsDataList) == total_items:
             
@@ -120,40 +135,31 @@ def pagingLoop(search_query, sort, is_seller_search=True, filter = None):
             break
 
         for item in data:
-            if item not in adsDataList:
-
-                ad = {}
-                ad['ID'] = item['id']
-                ad['Título'] = item['title']
-                ad['Preço'] = item['price']
-
-                if item['listing_type_id'] == 'gold_pro':
-                    ad['Tipo'] = 'Premium'
-
-                else:
-                    ad['Tipo'] = 'Clássico'
-
-                ad['Vendas'] = item['sold_quantity']
-                ad['Data de Criação'] = convertDate(item['stop_time'])
-                ad['QTD Dias Ativo'] = calculateDateDifference(ad['Data de Criação'])
-
-                if ad['QTD Dias Ativo'] != 0:
-                    ad['Vendas/Dias'] = ad['Vendas'] / ad['QTD Dias Ativo']
-    
-                else:
-                    ad['Vendas/Dias'] = 0
-
-                ad['Envio'] = item['shipping']['logistic_type'].replace('xd_drop_off', 'normal').replace('drop_off', 'normal')
-
-                if not is_seller_search:
-                    ad['Vendedor'] = item["seller"]["nickname"]
-                    ad['Origem'] = item['address']['state_id']
-
-                ad['Link'] = item['permalink']
-                ad['Data da Análise'] = analysisDate
-
-                adsDataList.append(ad)
-                pbar.update(1)
+            
+            creation_date = convertDate(item['stop_time'])
+            days_active = calculateDateDifference(creation_date)
+            sales = item['sold_quantity']
+            sales_per_day = sales / days_active if days_active != 0 else 0
+            visits = getVisits(item['id'])
+            ad = {
+                'ID' : item['id'],
+                'Título' : item['title'],
+                'Preço' : item['price'],
+                'Tipo' : 'Premium' if item['listing_type_id'] == 'gold_pro' else 'Clássico',
+                'Vendas' : sales,
+                'Visitas' : visits,
+                'Conversão' : sales / visits if item['sold_quantity'] != 0 else 0,
+                'Data de Criação' : creation_date,
+                'QTD Dias Ativo' : days_active,
+                'Vendas/Dias' : sales_per_day,
+                'Envio' : 'Normal' if item['shipping']['logistic_type'] != 'fulfillment' else 'Normal',
+                'Vendedor' : item["seller"]["nickname"] if not is_seller_search else None,
+                'Origem' : item['address']['state_id'] if not is_seller_search else None,
+                'Link': item['permalink'],
+                'Data da Análise' : analysisDate
+            }
+            adsDataList.append(ad)
+            pbar.update(1)
 
         offset += limit
 
@@ -163,22 +169,28 @@ def pagingLoop(search_query, sort, is_seller_search=True, filter = None):
 def saveDictsAsExcel(dict_list, filename):
 
     if os.path.exists(f"{filename}.xlsx"):
+
         i = 2
+
         while os.path.exists(f"{filename}.xlsx"):
+
             match = re.search(r'\((\d+)\)', filename)
-            if match:
-                old_number = match.group(1)
+
+            if match: 
+
                 new_number = str(i)
                 filename = re.sub(r'\(\d+\)', f'({new_number})', filename)
-            else:
-                filename = f'{filename} ({i})'
+
+            else: filename = f'{filename} ({i})'
+
             i += 1
     
             print(f"\nO arquivo '{filename}' já existe. O nome será alterado para '{filename}'")
             
     df = pd.DataFrame(dict_list)
     df.to_excel(f"{filename}.xlsx", index=False)
-    print(f"\nDados salvos em '{filename}.xlsx'\n")
+
+    return f"\nDados salvos em '{filename}.xlsx'\n"
 
 
 def convertDate(date):
@@ -186,76 +198,48 @@ def convertDate(date):
     date_obj = datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ")
     corrected_date = date_obj - relativedelta(years=20) + timedelta(days=5)
     formatted_date = corrected_date.strftime("%d/%m/%Y")
+
     return formatted_date
 
 
 def calculateDateDifference(date):
+
     current_date = datetime.now().date()
     date_obj = datetime.strptime(date, "%d/%m/%Y").date()
     difference = (current_date - date_obj).days
+
     return difference
 
 
 def clear():
-    if os.name == 'nt':  # Windows
-        os.system('cls')
-    else:
-        os.system('clear')
+    
+    if os.name == 'nt': os.system('cls') #Windows
 
+    else: os.system('clear')
 
-def exibir_mensagem_de_ajuda():
-    # Mensagem de ajuda
-    print("""
-Opções disponíveis:
-
-  -v <nome do vendedor>   : Especifica que a pesquisa será pelo nome do vendedor e recebe o nome.
-
-  -i <nome do item>       : Especifica que a pesquisa será pelo nome do item e recebe o nome do item.
-
-  -o <ordenação>          : Especifica o método de ordenação dos resultados: price_asc, price_desc, relevance.
-                            O padrão é price_desc.
-
-  -n <nome do arquivo>    : Especifica o nome do arquivo .xlsx. O padrão é "Anuncios - <nome do vendedor/item> - <metodo de ordenação>".
-
-  -h                      : Exibe esta mensagem de ajuda.
-
-  
-Argumentos que contém espaço devem ser passados com aspas
-
-Exemplos de uso:
-
-  usco-AnalisaAnuncios -i "Iphone 7"
-  usco-AnalisaAnuncios -v João -o price_asc
-  usco-AnalisaAnuncios -i Celular -n "Meus Anúncios" -o relevance
-  """)
 
 
 def main(args):
 
     clear()
 
-    parser = argparse.ArgumentParser(description='Usconnect Analisa Anuncios')
+    parser = argparse.ArgumentParser(description='USconnect Analisa Anuncios - Este programa permite analisar anúncios por vendedor ou item.')
 
-    parser.add_argument('-v', '--vendedor', help='Especifica o nome do vendedor')
-    parser.add_argument('-i', '--item', help='Especifica o nome do item')
-    parser.add_argument('-o', '--ordenação', choices=['price_asc', 'price_desc', 'relevance'], default='price_desc',
-                        help='Especifica a ordenação dos resultados')
-    parser.add_argument('-n', '--nome_arquivo', help='Especifica o nome do arquivo')
-    parser.add_argument('-f', '--filtro', nargs='*', metavar=('filter_1', 'filter_2'), choices=['power_seller', 'internacional'], help='Especifica um filtro para a pesquisa')
+    parser.add_argument('-v', '--vendedor')
+    parser.add_argument('-i', '--item')
+    parser.add_argument('-o', '--ordenacao', choices=['price_asc', 'price_desc', 'relevance'], default='price_desc',)
+    parser.add_argument('-n', '--nome_arquivo')
+    parser.add_argument('-f', '--filtro', nargs='*', metavar=('filter_1', 'filter_2'), choices=['power_seller', 'internacional'])
 
-
+    parser.usage = "USconnect Analisa Anuncios - modo de uso: [-v [Vendedor] ou -i [Item]] -o [Ordenação] -n [Nome do Arquivo] -f [Filtro]"
     args = parser.parse_args(args)
 
     # Aqui definimos as variáveis seller_name, item_name, sort e output_filename com base nos argumentos fornecidos
     seller_name = args.vendedor
     item_name = args.item
-    sort = args.ordenação
+    sort = args.ordenacao
     output_filename = args.nome_arquivo
     filter = args.filtro
-    
-    if '-h' in args or '--help' in args:
-        exibir_mensagem_de_ajuda()
-        return
 
     if seller_name:
         adsDataList = pagingLoop(seller_name, sort, is_seller_search=True, filter = filter)
@@ -267,7 +251,7 @@ def main(args):
         print("""
 Você deve especificar o nome do vendedor (-v USCONNECT) ou do item (-i "Iphone 7")
             
-Comando usco-AnalisaAnuncios -h para mais informações
+Comando -h ou --help para mais informações
         """)
         return
 
