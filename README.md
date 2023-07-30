@@ -23,7 +23,7 @@
 ## Exemplo de saída:
 
    ![Exemplo.png](https://github.com/davichiqueti/Usconnect-AnalisaAnuncios/blob/main/Exemplo.png)
-   > apenas 1 item para visualização
+   > apenas 5 itens para visualização
    
 ## Como Usar:
 
