@@ -1,6 +1,6 @@
 # Usconnect-AnalisaAnuncios
 
-   Sistema Projetado para extrair informações do Mercado Livre atraves de sua API oficial. A busca pode ser feita pelo nome do produto ou do vendedor. Os dados são transferidos para uma tabela do Excel.
+   Sistema Projetado para extrair informações do Mercado Livre atraves de sua API oficial. A busca pode ser feita pelo nome do produto ou do vendedor. Os dados são tratados e transferidos para uma tabela do Excel.
 
    Projeto exigido pelo E-commerce em que atuo. Logo, foi meu primeiro projeto profissional. É muito gratificante poder aplicar meus conhecimentos na resolução de problemas da minha equipe!
 
