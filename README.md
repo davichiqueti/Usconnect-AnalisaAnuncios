@@ -16,12 +16,15 @@
    
 ## Tecnologias Utilizadas:
 
-   *Linguagem Python*
-   Estrutura e execução de *Requisições HTTP* utilizando Lib *Requests*
-   Tratamento de dados com *Pandas*
-   Passagens de parametro por linha de comando utilizando *argparse*
+   * *Linguagem Python*
+   * Estrutura e execução de *Requisições HTTP* utilizando Lib *Requests*
+   * Tratamento de dados com *Pandas*
+   * Passagens de parametro por linha de comando utilizando *argparse*
 
 ## Como Usar:
 
-   * Baixar interpretador [Python](https://www.python.org/downloads/)
-   * Instalar Bibliotecas especificadas em [requirement.txt](https://github.com/davichiquetUsconnect-AnalisaAnuncios/blob/main/requirements.txt)
+   __1 -__ Baixar interpretador [Python](https://www.python.org/downloads/)
+   __2 -__ Instalar Bibliotecas especificadas em [requirement.txt](https://github.com/davichiqueti/Usconnect-AnalisaAnuncios/blob/main/requirements.txt)
+   __3 -__ Abrir prompt de comando no diretório do arquivo
+   __4 -__ Rodar comando ```python usco-AnalisaAnuncios-v1.1.py -v "nome do vendedor"´´´
+   > Mais instruções de uso com comando -h ou --help
