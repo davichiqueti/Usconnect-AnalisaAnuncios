@@ -1,6 +1,6 @@
 # Usconnect-AnalisaAnuncios
 
-   Sistema Projetado para extrair informações do Mercado Livre atraves de sua API oficial. A busca pode ser feita pelo nome do produto ou do vendedor.
+   Sistema Projetado para extrair informações do Mercado Livre atraves de sua API oficial. A busca pode ser feita pelo nome do produto ou do vendedor. Os dados são transferidos para uma tabela do Excel.
 
    Projeto exigido pelo E-commerce em que atuo. Logo, foi meu primeiro projeto profissional. É muito gratificante poder aplicar meus conhecimentos na resolução de problemas da minha equipe!
 
@@ -27,7 +27,9 @@
 
    __2 -__ Instalar Bibliotecas especificadas em [requirement.txt](https://github.com/davichiqueti/Usconnect-AnalisaAnuncios/blob/main/requirements.txt)
 
-   __3 -__ Abrir prompt de comando no diretório do arquivo
+   __3 -__ Fazer o dowload do código python no diretório de destino das tabelas
 
-   __4 -__ Rodar comando ```python usco-AnalisaAnuncios-v1.1.py -v "nome do vendedor"```
+   __4 -__ Abrir prompt de comando no diretório do arquivo
+
+   __5 -__ Rodar comando ```python usco-AnalisaAnuncios-v1.1.py -v "nome do vendedor"```
    > Mais informações sobre os parametros com -h ou --help
