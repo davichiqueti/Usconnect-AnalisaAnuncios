@@ -1,13 +1,27 @@
-# USCONNECT-AnalisaAnuncios
+# Usconnect-AnalisaAnuncios
 
-   Sistema Projetado para o E-commerce em que eu trabalho.
-   Extrai informações do Mercado Livre atraves de sua API oficial. A busca pode ser feita pelo nome do produto ou do vendedor
+   Sistema Projetado para extrair informações do Mercado Livre atraves de sua API oficial. A busca pode ser feita pelo nome do produto ou do vendedor.
+
+   Projeto exigido pelo meu superior de meu trabalho. Logo, foi meu primeiro projeto profissional. É muito gratificante poder aplicar meus conhecimentos na resolução de problemas da minha equipe!
+
 
 ## Objetivo:
 
-   Aumentar a produtividade da equipe auxiliando em tarefas do setor de marketing. Sendo essas:
-   - Avaliar rentabilidade de novos produtos.
-   - Analisar anúncios de um concorrente.
-   - Gerar insisghts a partir dos anúncios de nossas contas.
-   - Encontrar os melhores métodos utilizados para anunciar um produto.
+   Automatizar o processo da coleta de dados do Mercado Livre para Gerar Insights e estratégias de marketing com informações coletadas. Permitindo as seguintes análises:
+
+   * Avaliar rentabilidade de novos produtos.
+   * Encontrar os melhores métodos utilizados para anunciar um produto.
+   * Analisar anúncios de um concorrente.
+   * Visão geral sobre o rendimento de anúncios em nossas contas no MarketPlace.
    
+## Tecnologias Utilizadas:
+
+   *Linguagem Python*
+   Estrutura e execução de *Requisições HTTP* utilizando Lib *Requests*
+   Tratamento de dados com *Pandas*
+   Passagens de parametro por linha de comando utilizando *argparse*
+
+## Como Usar:
+
+   * Baixar interpretador [Python](https://www.python.org/downloads/)
+   * Instalar Bibliotecas especificadas em [requirement.txt](https://github.com/davichiquetUsconnect-AnalisaAnuncios/blob/main/requirements.txt)
