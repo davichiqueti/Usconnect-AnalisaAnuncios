@@ -186,8 +186,8 @@ def pagingLoop(search_query, sort, is_seller_search=True, filter = None):
 
             if not is_seller_search: 
                 
-                ad['Vendedor']  : item["seller"]["nickname"]
-                ad['Origem']    : item['address']['state_id']
+                ad['Vendedor']  = item["seller"]["nickname"]
+                ad['Origem']    = item['address']['state_id']
             
             adsDataList.append(ad) # Adiciona os dicionários na lista de dados
             pbar.update(1) # Atualiza a barra de progresso
@@ -198,8 +198,17 @@ def pagingLoop(search_query, sort, is_seller_search=True, filter = None):
 
 
 def saveDictsAsExcel(dict_list, filename):
-    # Salvando os dados em um arquivo Excel
-    if os.path.exists(f"{filename}.xlsx"): # Tratamento para arquivos já existentes
+    # Salva os dados em uma tabela Excel na pasta "Dados Extraídos"
+    current_directory = os.getcwd()
+    target_directory = os.path.join(current_directory, "Dados Extraídos")
+
+    if not os.path.exists(target_directory): 
+        
+        os.makedirs(target_directory)
+    
+    full_filename = os.path.join(target_directory, f"{filename}.xlsx")
+
+    if os.path.exists(full_filename): # Tratamento para arquivos já existentes
 
         i = 2
 
@@ -220,9 +229,9 @@ def saveDictsAsExcel(dict_list, filename):
         print(f"\nO arquivo '{filename}' já existe. O nome será alterado para '{filename}'")
 
     df = pd.DataFrame(dict_list) # Transforma a lista com os dicionários em um DataFrame Pandas
-    df.to_excel(f"{filename}.xlsx", index=False, columns=df.columns) # Salva os dados em um arquivo Excel
+    df.to_excel(full_filename, index=True, columns=df.columns) # Salva os dados em um arquivo Excel
 
-    print(f"\nDados salvos em '{filename}.xlsx'\n")
+    print(f"\nDados salvos em 'Dados Extraídos\{filename}.xlsx'\n")
 
 
 def convertDate(date):
