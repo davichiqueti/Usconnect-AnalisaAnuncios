@@ -9,87 +9,32 @@ import re
 import argparse
 
 
-def requestAdsBySeller(seller_name, sort, offset, limit, filter):
+def requestDataFromADS(search_query_key, search_query_value, sort, offset, limit, filter=None):
     url = f"https://api.mercadolibre.com/sites/MLB/search?"
+    
     params = {
-        'nickname': seller_name,
+        search_query_key: search_query_value,
         'sort': sort,
         'offset': offset,
         'limit': limit,
     }
 
     if filter:
-        if ('internacional' in filter):
+        if 'internacional' in filter:
             params['shipping_origin'] = 10215069    # Adiciona o filtro de venda internacional pelo ID
-        elif filter and ('best_sellers' in filter): 
-            params['power_seller'] = 'yes'          # Adiciona o filtro de melhores vendedores
-
-    try:
-        response = requests.get(url, params=params)
-        data = response.json()
-
-        return data['results']
-    except requests.exceptions.ConnectTimeout as e:
-        print("\nErro de tempo limite de conexão:", e)
-    except requests.exceptions.RequestException as e: 
-        print("\nErro de requisição:", e)
-
-
-
-def requestAdsByProduct(search_query, sort, offset, limit, filter):
-    url = f"https://api.mercadolibre.com/sites/MLB/search?"
-    params = {
-        'q' : search_query,
-        'sort': sort,
-        'offset': offset,
-        'limit': limit,
-    }
-
-    if filter:
-        if ('internacional' in filter):
-            params['shipping_origin'] = 10215069    # Adiciona o filtro de venda internacional pelo ID
-        elif filter and ('best_sellers' in filter): 
+        elif 'best_sellers' in filter: 
             params['power_seller'] = 'yes'          # Adiciona o filtro de melhores vendedores
 
     try: 
         response = requests.get(url, params=params)
         data = response.json()
 
-        return data['results']
+        return data
     except requests.exceptions.ConnectTimeout as e: 
         print("\nErro de tempo limite de conexão:", e)
     except requests.exceptions.RequestException as e:
         print("\nErro de requisição:", e)
-
-
-
-def requestTotalItems(search_query, is_seller_search=True, filter = None):
-    params = {}
-    params['limit'] = 1
-
-    if is_seller_search:
-        url = f"https://api.mercadolibre.com/sites/MLB/search?"
-        params = {'nickname': search_query}
-    else:
-        url = f"https://api.mercadolibre.com/sites/MLB/search?"
-        params = {'q' : search_query}
-
-    if filter:
-        if ('internacional' in filter):
-            params['shipping_origin'] = 10215069    # Adiciona o filtro de venda internacional pelo ID
-        elif filter and ('best_sellers' in filter): 
-            params['power_seller'] = 'yes'          # Adiciona o filtro de melhores vendedores
-
-    try:
-        response = requests.get(url, params=params)
-        data = response.json()
-
-        return data['paging']['total']
-    except requests.exceptions.ConnectTimeout as e: 
-        print("\nErro de tempo limite de conexão:", e)
-    except requests.exceptions.RequestException as e:
-        print("\nErro de requisição:", e)
-
+    
 
 
 def getVisits(ad_id):
@@ -107,20 +52,21 @@ def getVisits(ad_id):
 
 
 
-def pagingLoop(search_query, sort, is_seller_search=True, filter = None):
+def pagingLoop(search_query, sort, filter, is_seller_search):
     # Looping realizar a paginação considerando um limite de 50 anúncios por requisição
     offset = 0
     limit = 50
     analysisDate = datetime.now().date().strftime("%d/%m/%Y")
     adsDataList = []
-    total_items = requestTotalItems(search_query, is_seller_search, filter = filter) 
+
+    search_query_key = 'nickname' if is_seller_search else 'q'
+    total_items = requestDataFromADS(search_query_key, search_query, sort, offset, 1, filter) 
+    total_items = total_items['paging']['total']
     pbar = tqdm(total=total_items, desc='Extraindo Dados') # Cria uma barra de progresso
 
     while True:
-        if is_seller_search: 
-            data = requestAdsBySeller(search_query, sort, offset, limit, filter)
-        else: 
-            data = requestAdsByProduct(search_query, sort, offset, limit, filter)
+        data = requestDataFromADS(search_query_key, search_query, sort, offset, limit, filter)
+        data = data['results']
 
         if not data or len(adsDataList) == total_items:
             break
@@ -234,9 +180,11 @@ def main(args):
     filter = args.filtro
 
     if seller_name:
-        adsDataList = pagingLoop(seller_name, sort, is_seller_search=True, filter = filter)
+        is_seller_search = True
+        search_query = seller_name
     elif item_name:
-        adsDataList = pagingLoop(item_name, sort, is_seller_search=False, filter = filter)
+        is_seller_search = False
+        search_query = seller_name
     else:
         print("""
                 Você deve especificar o nome do vendedor (-v USCONNECT) ou do item (-i "Iphone 7")
@@ -244,6 +192,8 @@ def main(args):
                 Comando -h ou --help para mais informações
         """)
         return
+
+    adsDataList = pagingLoop(search_query, sort, is_seller_search, filter)
 
     if not output_filename: 
         output_filename = f"Anuncios - {seller_name}" if seller_name else f"Anuncios - {item_name}"
