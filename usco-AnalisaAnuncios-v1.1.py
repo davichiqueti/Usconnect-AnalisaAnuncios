@@ -47,10 +47,7 @@ class AnalysisAds():
 
         def requestAdVisitsFromAPI(ad_id):
             url = f'https://api.mercadolibre.com/visits/items?ids={ad_id}'
-            params = {
-                'Authorization': f'Bearer 9vUx388fBOXxkNOftqR8gPVcwBnz2pi9'
-            }
-            response = requests.get(url, params=params)
+            response = requests.get(url)
             data = response.json()
                 
             if response.status_code == 200:
